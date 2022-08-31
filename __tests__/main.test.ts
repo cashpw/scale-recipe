@@ -7,16 +7,16 @@ describe('scale', () => {
     expect(scale(ingredient, 1)).toEqual(ingredient);
   });
 
-  it('scales from cups to pints', () => {
+  it('from cups to pints', () => {
     const ingredient = '3 cups milk';
 
-    expect(scale(ingredient, 1)).toEqual('1.5 pints milk');
+    expect(scale(ingredient, 1)).toEqual('1 1/2 pints milk');
   });
 
-  it('scales from cups to cups', () => {
+  it('formats from cups to cups', () => {
     const ingredient = '1.5 cups milk';
 
-    expect(scale(ingredient, 1)).toEqual('1.5 cups milk');
+    expect(scale(ingredient, 1)).toEqual('1 1/2 cups milk');
   });
 
   it('does NOT format quantity for metric units of measure', () => {
@@ -49,16 +49,22 @@ describe('scale', () => {
     expect(scale(ingredient, 2000)).toEqual('2 liters milk');
   });
 
-  it('scales by positive fractional numbers', () => {
+  it('scales by positive fractional numbers to whole number', () => {
     const ingredient = '1/3 cups milk';
 
     expect(scale(ingredient, 3)).toEqual('1 cup milk');
   });
 
-  it('scales by a range of positive fractional imperial numbers', () => {
+  it('scales and formats by a range of positive fractional imperial numbers', () => {
     const ingredient = '1/3-2/3 cups milk';
 
-    expect(scale(ingredient, 14)).toEqual('1-2 cups milk');
+    expect(scale(ingredient, 14)).toEqual('1 1/6-2 1/3 quarts milk');
+  });
+
+  it('scales and formats by a range of 2positive fractional imperial numbers', () => {
+    const ingredient = '1/3 cups milk';
+
+    expect(scale(ingredient, 14)).toEqual('1 1/6 quarts milk');
   });
 
   it('scales by a range of positive fractional metric numbers', () => {

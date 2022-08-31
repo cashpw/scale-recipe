@@ -1,10 +1,13 @@
 const convert = require('convert-units');
-import { parseIngredient, Ingredient } from 'parse-ingredient';
-// import {formatQuantity} from 'format-quantity';
 const spelling = require('american-english');
-import { Decimal } from 'decimal.js';
 
-// const convert = configureMeasurements(allMeasures);
+import { Decimal } from 'decimal.js';
+import { parseIngredient, Ingredient } from 'parse-ingredient';
+import { formatQuantity } from 'format-quantity';
+
+const FIRST_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)/;
+const SECOND_FRACTIONAL_REGEX = /^[^\s]+-([0-9]+)\/([0-9]+)/;
+const RANGE_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)-([0-9]+)\/([0-9]+)/;
 
 const UNIT_OF_MEASURE_CONVERSION = {
   // Mass | imperial
@@ -59,7 +62,21 @@ const EXCLUDE_UNITS = [
   'kanna',
 ];
 
-function getUnitsToExclude(quantity: number, unitOfMeasure: string) {
+const IMPERIAL_UNITS = [
+  // Mass | imperial
+  'qt',
+  'oz',
+
+  // Volume | imperial
+  'tsp',
+  'Tbs',
+  'cup',
+  'pnt',
+  'qt',
+  'gal',
+];
+
+function getUnitsToExclude(quantity: number, unitOfMeasure: string): string[] {
   const unitsToExclude = EXCLUDE_UNITS;
 
   if (unitOfMeasure === 'cup' && quantity > 1 / 8) {
@@ -70,11 +87,23 @@ function getUnitsToExclude(quantity: number, unitOfMeasure: string) {
   return unitsToExclude;
 }
 
+function getHumanUnit(singular: string, plural: string, value: number): string {
+  const pluralizedUnitOfMeasure = (value > 1 ? plural : singular).toLowerCase();
+  const unitedStatesSpelling = spelling.toUS(
+    pluralizedUnitOfMeasure.toLowerCase(),
+  );
+
+  if (unitedStatesSpelling === 'word_not_found') {
+    return pluralizedUnitOfMeasure;
+  }
+
+  return unitedStatesSpelling;
+}
+
 function getBestUnitOfMeasure(
   quantity: number,
-  quantity2: number|null,
   currentUnitOfMeasure: string,
-): { val: number; unit: string, humanUnit: string,} {
+): { singular: string; plural: string; val: number; unit: string } {
   const relevantUnitOfMeasure = UNIT_OF_MEASURE_CONVERSION[currentUnitOfMeasure]
     ? UNIT_OF_MEASURE_CONVERSION[currentUnitOfMeasure]
     : currentUnitOfMeasure;
@@ -82,39 +111,8 @@ function getBestUnitOfMeasure(
     .from(relevantUnitOfMeasure)
     .toBest({ exclude: getUnitsToExclude(quantity, currentUnitOfMeasure) });
 
-  let pluralizedUnitOfMeasure: string;
-  if (quantity2) {
-    const convertedQuantity2 = convert(quantity2).from(UNIT_OF_MEASURE_CONVERSION[currentUnitOfMeasure]).to(bestUnitOfMeasure.unit);
-    pluralizedUnitOfMeasure = (
-    convertedQuantity2 > 1
-      ? bestUnitOfMeasure.plural
-      : bestUnitOfMeasure.singular
-  );
-  } else {
-  pluralizedUnitOfMeasure = (
-    bestUnitOfMeasure.val > 1
-      ? bestUnitOfMeasure.plural
-      : bestUnitOfMeasure.singular
-  );
-  }
-  pluralizedUnitOfMeasure = pluralizedUnitOfMeasure.toLowerCase();
-  const unitedStatesSpelling = spelling.toUS(pluralizedUnitOfMeasure);
-
-  if (unitedStatesSpelling === 'word_not_found') {
-    return {
-      val: bestUnitOfMeasure.val,
-      unit: bestUnitOfMeasure.unit,
-      humanUnit: pluralizedUnitOfMeasure,
-    };
-  }
-
   return {
-    val: bestUnitOfMeasure.val,
-    unit: bestUnitOfMeasure.unit,
-    humanUnit:
-      unitedStatesSpelling !== 'word_not_found'
-        ? unitedStatesSpelling
-        : pluralizedUnitOfMeasure,
+    ...bestUnitOfMeasure,
   };
 }
 
@@ -123,23 +121,39 @@ function ingredientToString(ingredient: Ingredient): string {
   const components = [];
 
   if (quantity2) {
-    const { val: quantityVal, unit,humanUnit,} = getBestUnitOfMeasure(
-      quantity,
-      quantity2,
-      unitOfMeasureID,
-    );
-    const quantity2Val = convert(quantity2).from(UNIT_OF_MEASURE_CONVERSION[unitOfMeasureID]).to(unit);
+    let {
+      val: quantityVal,
+      unit,
+      singular,
+      plural,
+    } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
+    let quantity2Val = convert(quantity2)
+      .from(UNIT_OF_MEASURE_CONVERSION[unitOfMeasureID])
+      .to(unit);
+    const humanUnit = getHumanUnit(singular, plural, quantity2Val);
 
-    components.push(`${quantityVal}-${quantity2Val}`);
+    if (IMPERIAL_UNITS.includes(unit)) {
+      components.push(
+        `${formatQuantity(quantityVal)}-${formatQuantity(quantity2Val)}`,
+      );
+    } else {
+      components.push(`${quantityVal}-${quantity2Val}`);
+    }
     components.push(humanUnit);
   } else {
-    const { val, humanUnit } = getBestUnitOfMeasure(
-      quantity,
-      /* quantity2= */ null,
-      unitOfMeasureID,
-    );
+    const {
+      val: quantityVal,
+      singular,
+      plural,
+      unit,
+    } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
+    const humanUnit = getHumanUnit(singular, plural, quantityVal);
 
-    components.push(val);
+    if (IMPERIAL_UNITS.includes(unit)) {
+      components.push(`${formatQuantity(quantityVal)}`);
+    } else {
+      components.push(`${quantityVal}`);
+    }
     components.push(humanUnit);
   }
 
@@ -150,18 +164,20 @@ function ingredientToString(ingredient: Ingredient): string {
   return components.join(' ');
 }
 
-const FIRST_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)/;
-const SECOND_FRACTIONAL_REGEX = /^[^\s]+-([0-9]+)\/([0-9]+)/;
-const RANGE_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)-([0-9]+)\/([0-9]+)/;
-
 export function scale(ingredient: string, factor: number): string {
   const parsedIngredient = parseIngredient(ingredient, {
     normalizeUOM: true,
     allowLeadingOf: true,
   })[0];
 
-  let quantity = parsedIngredient.quantity === null ? null : new Decimal(parsedIngredient.quantity);
-  let quantity2 = parsedIngredient.quantity2 === null ? null : new Decimal(parsedIngredient.quantity2);
+  let quantity =
+    parsedIngredient.quantity === null
+      ? null
+      : new Decimal(parsedIngredient.quantity);
+  let quantity2 =
+    parsedIngredient.quantity2 === null
+      ? null
+      : new Decimal(parsedIngredient.quantity2);
   if (RANGE_FRACTIONAL_REGEX.test(ingredient)) {
     const match = ingredient.match(RANGE_FRACTIONAL_REGEX);
     const quantity1Numerator = match[1];
@@ -185,14 +201,8 @@ export function scale(ingredient: string, factor: number): string {
     quantity = new Decimal(numerator).dividedBy(denominator);
   }
 
-  const scaledQuantity =
-    quantity
-      ? quantity.times(factor).toNumber()
-      : null;
-  const scaledQuantity2 =
-    quantity2
-      ? quantity2.times(factor).toNumber()
-      : null;
+  const scaledQuantity = quantity ? quantity.times(factor).toNumber() : null;
+  const scaledQuantity2 = quantity2 ? quantity2.times(factor).toNumber() : null;
 
   return ingredientToString({
     ...parsedIngredient,
