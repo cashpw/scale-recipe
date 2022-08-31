@@ -1,6 +1,6 @@
 # scale-recipe
 
-## Export build to recipes.cashweaver.com
+## Export build to [recipes.cashweaver.com](http://github.com/cashweaver/recipes)
 
 ``` shell
 npm run build:release \
