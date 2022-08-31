@@ -1,16 +1,73 @@
 import { scale } from '../src/main.js';
 
 describe('scale', () => {
+  describe('imperial', () => {
+    describe('from whole cup', () => {
+      const ingredient = '1 cup milk';
+      it('to single cup', () => {
+        expect(scale(ingredient, 1)).toEqual('1 cup milk');
+      });
+      it('to single pint', () => {
+        expect(scale(ingredient, 2)).toEqual('1 pint milk');
+      });
+      it('to single quart', () => {
+        expect(scale(ingredient, 4)).toEqual('1 quart milk');
+      });
+      it('to single gallon', () => {
+        expect(scale(ingredient, 16)).toEqual('1 gallon milk');
+      });
+    });
+
+    describe('from decimal cup', () => {
+      const ingredient = '0.5 cup milk';
+      it('to cup', () => {
+        expect(scale(ingredient, 2)).toEqual('1 cup milk');
+      });
+      it('to pint', () => {
+        expect(scale(ingredient, 2*2)).toEqual('1 pint milk');
+      });
+      it('to quart', () => {
+        expect(scale(ingredient, 4*2)).toEqual('1 quart milk');
+      });
+      it('to gallon', () => {
+        expect(scale(ingredient, 16*2)).toEqual('1 gallon milk');
+      });
+    });
+
+    describe('from fractional cup', () => {
+      const ingredient = '1/2 cup milk';
+      it('to cup', () => {
+        expect(scale(ingredient, 2)).toEqual('1 cup milk');
+      });
+      it('to pint', () => {
+        expect(scale(ingredient, 2*2)).toEqual('1 pint milk');
+      });
+      it('to quart', () => {
+        expect(scale(ingredient, 4*2)).toEqual('1 quart milk');
+      });
+      it('to gallon', () => {
+        expect(scale(ingredient, 16*2)).toEqual('1 gallon milk');
+      });
+    });
+
+    describe('from irrational fraction cup', () => {
+      const ingredient = '1 1/2 cup milk';
+      it('to pints', () => {
+        expect(scale(ingredient, 2)).toEqual('1 1/2 pints milk');
+      });
+      it('to quarts', () => {
+        expect(scale(ingredient, 4)).toEqual('1 1/2 quarts milk');
+      });
+      it('to gallons', () => {
+        expect(scale(ingredient, 16)).toEqual('1 1/2 gallons milk');
+      });
+    });
+  });
+
   it('is NOOP for factor of 1 with singular whole quantity', () => {
     const ingredient = '1 cup milk';
 
     expect(scale(ingredient, 1)).toEqual(ingredient);
-  });
-
-  it('from cups to pints', () => {
-    const ingredient = '3 cups milk';
-
-    expect(scale(ingredient, 1)).toEqual('1 1/2 pints milk');
   });
 
   it('formats from cups to cups', () => {
@@ -61,11 +118,25 @@ describe('scale', () => {
     expect(scale(ingredient, 14)).toEqual('1 1/6-2 1/3 quarts milk');
   });
 
-  it('scales and formats by a range of 2positive fractional imperial numbers', () => {
+  it('scales and formats by a range of positive fractional imperial numbers to whole numbers', () => {
+    const ingredient = '1/3-2/3 cups milk';
+
+    expect(scale(ingredient, 3)).toEqual('1-2 cups milk');
+  });
+
+  it('scales and formats by a mixed range of positive fractional imperial numbers', () => {
+    const ingredient = '1-1 2/3 cups milk';
+
+    expect(scale(ingredient, 14)).toEqual('3 1/2-5 5/6 quarts milk');
+  });
+
+  /*
+  it('scales and formats by a range of positive fractional imperial numbers', () => {
     const ingredient = '1/3 cups milk';
 
     expect(scale(ingredient, 14)).toEqual('1 1/6 quarts milk');
   });
+  */
 
   it('scales by a range of positive fractional metric numbers', () => {
     const ingredient = '500-600 milliliters milk';

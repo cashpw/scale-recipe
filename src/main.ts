@@ -6,10 +6,6 @@ import { Decimal } from 'decimal.js';
 import { parseIngredient, Ingredient } from 'parse-ingredient';
 import { formatQuantity } from 'format-quantity-with-sixteenths';
 
-const FIRST_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)/;
-const SECOND_FRACTIONAL_REGEX = /^[^\s]+-([0-9]+)\/([0-9]+)/;
-const RANGE_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)-([0-9]+)\/([0-9]+)/;
-
 const UNIT_OF_MEASURE_CONVERSION = {
   // Mass | imperial
   ounce: 'oz',
@@ -197,12 +193,28 @@ function ingredientToString(ingredient: Ingredient): string {
   return components.join(' ');
 }
 
-export function scale(ingredient: string, factor: number): string {
-  const parsedIngredient = parseIngredient(ingredient.toLowerCase(), {
-    normalizeUOM: true,
-    allowLeadingOf: true,
-  })[0];
+const QUANTITY_NUMBERS = /([0-9 .\/]+)/g
+const IMPROPER_FRACTION = /^([0-9]+) ([0-9]+)\/([0-9]+)/
+const FRACTION = /^([0-9]+)\/([0-9]+)/
 
+function decimalify(quantity: string): Decimal {
+  if (IMPROPER_FRACTION.test(quantity)) {
+    const [_, whole, numerator, denominator] = quantity.match(IMPROPER_FRACTION);
+
+    return new Decimal(whole).times(denominator).plus(numerator).dividedBy(denominator);
+  }
+
+  if (FRACTION.test(quantity)) {
+    const [_, numerator, denominator] = quantity.match(FRACTION);
+
+    return new Decimal(numerator).dividedBy(denominator);
+  }
+
+  return new Decimal(quantity);
+}
+
+
+function parseQuantities(ingredient:string, parsedIngredient: {quantity: number|null, quantity2: number|null}): {quantity: Decimal|null, quantity2: Decimal|null} {
   let quantity =
     parsedIngredient.quantity === null
       ? null
@@ -211,28 +223,32 @@ export function scale(ingredient: string, factor: number): string {
     parsedIngredient.quantity2 === null
       ? null
       : new Decimal(parsedIngredient.quantity2);
-  if (RANGE_FRACTIONAL_REGEX.test(ingredient)) {
-    const match = ingredient.match(RANGE_FRACTIONAL_REGEX);
-    const quantity1Numerator = match[1];
-    const quantity1Denominator = match[2];
-    const quantity2Numerator = match[3];
-    const quantity2Denominator = match[4];
 
-    quantity = new Decimal(quantity1Numerator).dividedBy(quantity1Denominator);
-    quantity2 = new Decimal(quantity2Numerator).dividedBy(quantity2Denominator);
-  } else if (FIRST_FRACTIONAL_REGEX.test(ingredient)) {
-    const match = ingredient.match(FIRST_FRACTIONAL_REGEX);
-    const numerator = match[1];
-    const denominator = match[2];
-
-    quantity = new Decimal(numerator).dividedBy(denominator);
-  } else if (SECOND_FRACTIONAL_REGEX.test(ingredient)) {
-    const match = ingredient.match(SECOND_FRACTIONAL_REGEX);
-    const numerator = match[1];
-    const denominator = match[2];
-
-    quantity = new Decimal(numerator).dividedBy(denominator);
+  const quantityNumbers = ingredient.match(QUANTITY_NUMBERS).filter((match) => match !== ' '
+  ).map((match) => match.trim());
+  if (quantityNumbers.length == 1) {
+    //console.log(quantityNumbers)
+    quantity = decimalify(quantityNumbers[0]);
+  } else {
+    //console.log(quantityNumbers[0])
+    //console.log(quantityNumbers[1])
+    quantity = decimalify(quantityNumbers[0]);
+    quantity2 = decimalify(quantityNumbers[1]);
   }
+
+  return {
+    quantity,
+    quantity2,
+  };
+}
+
+export function scale(ingredient: string, factor: number): string {
+  const parsedIngredient = parseIngredient(ingredient.toLowerCase(), {
+    normalizeUOM: true,
+    allowLeadingOf: true,
+  })[0];
+
+  const {quantity, quantity2} = parseQuantities(ingredient, parsedIngredient);
 
   const scaledQuantity = quantity ? quantity.times(factor).toNumber() : null;
   const scaledQuantity2 = quantity2 ? quantity2.times(factor).toNumber() : null;
