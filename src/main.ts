@@ -1,9 +1,10 @@
 const convert = require('convert-units');
 const spelling = require('american-english');
+const pluralize = require('pluralize');
 
 import { Decimal } from 'decimal.js';
 import { parseIngredient, Ingredient } from 'parse-ingredient';
-import { formatQuantity } from 'format-quantity';
+import { formatQuantity } from 'format-quantity-with-sixteenths';
 
 const FIRST_FRACTIONAL_REGEX = /^([0-9]+)\/([0-9]+)/;
 const SECOND_FRACTIONAL_REGEX = /^[^\s]+-([0-9]+)\/([0-9]+)/;
@@ -107,9 +108,19 @@ function getBestUnitOfMeasure(
   const relevantUnitOfMeasure = UNIT_OF_MEASURE_CONVERSION[currentUnitOfMeasure]
     ? UNIT_OF_MEASURE_CONVERSION[currentUnitOfMeasure]
     : currentUnitOfMeasure;
-  const bestUnitOfMeasure = convert(quantity)
-    .from(relevantUnitOfMeasure)
-    .toBest({ exclude: getUnitsToExclude(quantity, currentUnitOfMeasure) });
+  let bestUnitOfMeasure;
+  try {
+    bestUnitOfMeasure = convert(quantity)
+      .from(relevantUnitOfMeasure)
+      .toBest({ exclude: getUnitsToExclude(quantity, currentUnitOfMeasure) });
+  } catch (e) {
+    bestUnitOfMeasure = {
+      singular: currentUnitOfMeasure,
+      plural: pluralize(currentUnitOfMeasure),
+      val: quantity,
+      unit: currentUnitOfMeasure,
+    };
+  }
 
   return {
     ...bestUnitOfMeasure,
@@ -120,41 +131,63 @@ function ingredientToString(ingredient: Ingredient): string {
   const { quantity, quantity2, unitOfMeasureID } = ingredient;
   const components = [];
 
-  if (quantity2) {
-    let {
-      val: quantityVal,
-      unit,
-      singular,
-      plural,
-    } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
-    let quantity2Val = convert(quantity2)
-      .from(UNIT_OF_MEASURE_CONVERSION[unitOfMeasureID])
-      .to(unit);
-    const humanUnit = getHumanUnit(singular, plural, quantity2Val);
+  if (unitOfMeasureID) {
+    const formatQuantityOptions = {
+      tolerance: 0.009,
+    };
 
-    if (IMPERIAL_UNITS.includes(unit)) {
-      components.push(
-        `${formatQuantity(quantityVal)}-${formatQuantity(quantity2Val)}`,
-      );
-    } else {
-      components.push(`${quantityVal}-${quantity2Val}`);
-    }
-    components.push(humanUnit);
-  } else {
-    const {
-      val: quantityVal,
-      singular,
-      plural,
-      unit,
-    } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
-    const humanUnit = getHumanUnit(singular, plural, quantityVal);
+    if (quantity2) {
+      const {
+        val: quantityVal,
+        unit,
+        singular,
+        plural,
+      } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
+      let quantity2Val;
+      try {
+        quantity2Val = convert(quantity2)
+          .from(UNIT_OF_MEASURE_CONVERSION[unitOfMeasureID])
+          .to(unit);
+      } catch (e) {
+        quantity2Val = quantity2;
+      }
+      const humanUnit = getHumanUnit(singular, plural, quantity2Val);
 
-    if (IMPERIAL_UNITS.includes(unit)) {
-      components.push(`${formatQuantity(quantityVal)}`);
+      if (IMPERIAL_UNITS.includes(unit)) {
+        const formattedQuantityVal = formatQuantity(
+          quantityVal,
+          formatQuantityOptions,
+        );
+        const formattedQuantity2Val = formatQuantity(
+          quantity2Val,
+          formatQuantityOptions,
+        );
+
+        components.push(`${formattedQuantityVal}-${formattedQuantity2Val}`);
+      } else {
+        components.push(`${quantityVal}-${quantity2Val}`);
+      }
+      components.push(humanUnit);
     } else {
-      components.push(`${quantityVal}`);
+      const {
+        val: quantityVal,
+        singular,
+        plural,
+        unit,
+      } = getBestUnitOfMeasure(quantity, unitOfMeasureID);
+      const humanUnit = getHumanUnit(singular, plural, quantityVal);
+
+      if (IMPERIAL_UNITS.includes(unit)) {
+        const formattedQuantityVal = formatQuantity(
+          quantityVal,
+          formatQuantityOptions,
+        );
+        components.push(`${formattedQuantityVal}`);
+      } else {
+        components.push(`${quantityVal}`);
+      }
+      components.push(humanUnit);
     }
-    components.push(humanUnit);
   }
 
   if (ingredient.description) {
@@ -165,7 +198,7 @@ function ingredientToString(ingredient: Ingredient): string {
 }
 
 export function scale(ingredient: string, factor: number): string {
-  const parsedIngredient = parseIngredient(ingredient, {
+  const parsedIngredient = parseIngredient(ingredient.toLowerCase(), {
     normalizeUOM: true,
     allowLeadingOf: true,
   })[0];

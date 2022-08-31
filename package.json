@@ -1,5 +1,5 @@
 {
-  "name": "node-typescript-boilerplate",
+  "name": "typescript-boilerplate",
   "version": "0.0.0",
   "description": "Minimalistic boilerplate to quick-start Node.js development in TypeScript.",
   "type": "module",
@@ -11,6 +11,7 @@
     "@types/node": "~16",
     "@typescript-eslint/eslint-plugin": "~5.26",
     "@typescript-eslint/parser": "~5.26",
+    "browserify": "^17.0.0",
     "eslint": "~8.16",
     "eslint-config-prettier": "~8.5",
     "eslint-plugin-jest": "~26.2",
@@ -18,8 +19,9 @@
     "prettier": "~2.6",
     "rimraf": "~3.0",
     "ts-jest": "~28.0",
+    "ts-node": "^10.9.1",
     "tsutils": "~3.21",
-    "typescript": "~4.7"
+    "typescript": "~4.7",
   },
   "scripts": {
     "start": "node build/src/main.js",
@@ -40,12 +42,23 @@
     "american-english": "^1.0.1",
     "convert-units": "^2.3.4",
     "decimal.js": "^10.4.0",
-    "format-quantity": "^1.1.0",
+    "format-quantity-with-sixteenths": "^1.0.0",
     "parse-ingredient": "^0.5.0",
     "pluralize": "^8.0.0",
+    "tsify": "^5.0.4",
     "tslib": "~2.4"
   },
   "volta": {
     "node": "16.13.0"
-  }
+  },
+  "main": "jest.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cashweaver/scale-recipe.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/cashweaver/scale-recipe/issues"
+  },
+  "homepage": "https://github.com/cashweaver/scale-recipe#readme"
 }

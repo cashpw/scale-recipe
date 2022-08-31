@@ -78,4 +78,16 @@ describe('scale', () => {
 
     expect(scale(ingredient, 3)).toEqual('1.5-1.8 liters of milk');
   });
+
+  it('supports "bunches"', () => {
+    const ingredient = '1-2 bunches of flax';
+
+    expect(scale(ingredient, 3)).toEqual('3-6 bunches of flax');
+  });
+
+  it('supports sixteenths', () => {
+    const ingredient = '1 tablespoon cream';
+
+    expect(scale(ingredient, 100)).toEqual('1 9/16 quarts cream');
+  });
 });
