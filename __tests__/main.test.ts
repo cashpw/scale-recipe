@@ -1,42 +1,75 @@
-import { Delays, greeter } from '../src/main.js';
+import { scale } from '../src/main.js';
 
-describe('greeter function', () => {
-  const name = 'John';
-  let hello: string;
+describe('scale', () => {
+  it('is NOOP for factor of 1 with singular whole quantity', () => {
+    const ingredient = '1 cup milk';
 
-  let timeoutSpy: jest.SpyInstance;
-
-  // Act before assertions
-  beforeAll(async () => {
-    // Read more about fake timers
-    // http://facebook.github.io/jest/docs/en/timer-mocks.html#content
-    // Jest 27 now uses "modern" implementation of fake timers
-    // https://jestjs.io/blog/2021/05/25/jest-27#flipping-defaults
-    // https://github.com/facebook/jest/pull/5171
-    jest.useFakeTimers();
-    timeoutSpy = jest.spyOn(global, 'setTimeout');
-
-    const p: Promise<string> = greeter(name);
-    jest.runOnlyPendingTimers();
-    hello = await p;
+    expect(scale(ingredient, 1)).toEqual(ingredient);
   });
 
-  // Teardown (cleanup) after assertions
-  afterAll(() => {
-    timeoutSpy.mockRestore();
+  it('scales from cups to pints', () => {
+    const ingredient = '3 cups milk';
+
+    expect(scale(ingredient, 1)).toEqual('1.5 pints milk');
   });
 
-  // Assert if setTimeout was called properly
-  it('delays the greeting by 2 seconds', () => {
-    expect(setTimeout).toHaveBeenCalledTimes(1);
-    expect(setTimeout).toHaveBeenLastCalledWith(
-      expect.any(Function),
-      Delays.Long,
-    );
+  it('scales from cups to cups', () => {
+    const ingredient = '1.5 cups milk';
+
+    expect(scale(ingredient, 1)).toEqual('1.5 cups milk');
   });
 
-  // Assert greeter result
-  it('greets a user with `Hello, {name}` message', () => {
-    expect(hello).toBe(`Hello, ${name}`);
+  it('does NOT format quantity for metric units of measure', () => {
+    const ingredient = '1.5 liters milk';
+
+    expect(scale(ingredient, 1)).toEqual('1.5 liters milk');
+  });
+
+  it('scales by positive whole number', () => {
+    const ingredient = '1 milliliter milk';
+
+    expect(scale(ingredient, 2)).toEqual('2 milliliters milk');
+  });
+
+  it('scales to positive fractional number', () => {
+    const ingredient = '1 milliliter milk';
+
+    expect(scale(ingredient, 1.5)).toEqual('1.5 milliliters milk');
+  });
+
+  it('scales to singular larger unit', () => {
+    const ingredient = '1 milliliter milk';
+
+    expect(scale(ingredient, 1000)).toEqual('1 liter milk');
+  });
+
+  it('scales to plural larger unit', () => {
+    const ingredient = '1 milliliter milk';
+
+    expect(scale(ingredient, 2000)).toEqual('2 liters milk');
+  });
+
+  it('scales by positive fractional numbers', () => {
+    const ingredient = '1/3 cups milk';
+
+    expect(scale(ingredient, 3)).toEqual('1 cup milk');
+  });
+
+  it('scales by a range of positive fractional imperial numbers', () => {
+    const ingredient = '1/3-2/3 cups milk';
+
+    expect(scale(ingredient, 14)).toEqual('1-2 cups milk');
+  });
+
+  it('scales by a range of positive fractional metric numbers', () => {
+    const ingredient = '500-600 milliliters milk';
+
+    expect(scale(ingredient, 3)).toEqual('1.5-1.8 liters milk');
+  });
+
+  it('supports "of"', () => {
+    const ingredient = '500-600 milliliters of milk';
+
+    expect(scale(ingredient, 3)).toEqual('1.5-1.8 liters of milk');
   });
 });
