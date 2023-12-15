@@ -7,8 +7,8 @@ describe('scale', () => {
       it('to single cup', () => {
         expect(scale(ingredient, 1)).toEqual('1 cup milk');
       });
-      it('to single pint', () => {
-        expect(scale(ingredient, 2)).toEqual('1 pint milk');
+      it('to cups', () => {
+        expect(scale(ingredient, 2)).toEqual('2 cups milk');
       });
       it('to single quart', () => {
         expect(scale(ingredient, 4)).toEqual('1 quart milk');
@@ -23,14 +23,14 @@ describe('scale', () => {
       it('to cup', () => {
         expect(scale(ingredient, 2)).toEqual('1 cup milk');
       });
-      it('to pint', () => {
-        expect(scale(ingredient, 2*2)).toEqual('1 pint milk');
+      it('to cups', () => {
+        expect(scale(ingredient, 2 * 2)).toEqual('2 cups milk');
       });
       it('to quart', () => {
-        expect(scale(ingredient, 4*2)).toEqual('1 quart milk');
+        expect(scale(ingredient, 4 * 2)).toEqual('1 quart milk');
       });
       it('to gallon', () => {
-        expect(scale(ingredient, 16*2)).toEqual('1 gallon milk');
+        expect(scale(ingredient, 16 * 2)).toEqual('1 gallon milk');
       });
     });
 
@@ -39,21 +39,21 @@ describe('scale', () => {
       it('to cup', () => {
         expect(scale(ingredient, 2)).toEqual('1 cup milk');
       });
-      it('to pint', () => {
-        expect(scale(ingredient, 2*2)).toEqual('1 pint milk');
+      it('to cups', () => {
+        expect(scale(ingredient, 2 * 2)).toEqual('2 cups milk');
       });
       it('to quart', () => {
-        expect(scale(ingredient, 4*2)).toEqual('1 quart milk');
+        expect(scale(ingredient, 4 * 2)).toEqual('1 quart milk');
       });
       it('to gallon', () => {
-        expect(scale(ingredient, 16*2)).toEqual('1 gallon milk');
+        expect(scale(ingredient, 16 * 2)).toEqual('1 gallon milk');
       });
     });
 
     describe('from irrational fraction cup', () => {
       const ingredient = '1 1/2 cup milk';
-      it('to pints', () => {
-        expect(scale(ingredient, 2)).toEqual('1 1/2 pints milk');
+      it('to cups', () => {
+        expect(scale(ingredient, 2)).toEqual('3 cups milk');
       });
       it('to quarts', () => {
         expect(scale(ingredient, 4)).toEqual('1 1/2 quarts milk');
@@ -61,6 +61,115 @@ describe('scale', () => {
       it('to gallons', () => {
         expect(scale(ingredient, 16)).toEqual('1 1/2 gallons milk');
       });
+    });
+
+    describe('from whole teaspoon', () => {
+      const ingredient = '1 teaspoon vanilla';
+      it('to tablespoon', () => {
+        expect(scale(ingredient, 3)).toEqual('1 tablespoon vanilla');
+      });
+      it('to tablespoons', () => {
+        expect(scale(ingredient, 3 * 2)).toEqual('2 tablespoons vanilla');
+      });
+      it('to fractional cup', () => {
+        expect(scale(ingredient, 24)).toEqual('1/2 cup vanilla');
+      });
+      it('to whole cup', () => {
+        expect(scale(ingredient, 48)).toEqual('1 cup vanilla');
+      });
+      it('to whole cups', () => {
+        expect(scale(ingredient, 48 * 2)).toEqual('2 cups vanilla');
+      });
+    });
+
+    describe('from whole tablespoon', () => {
+      const ingredient = '1 tablespoon vanilla';
+      it('to tablespoon', () => {
+        expect(scale(ingredient, 3)).toEqual('3 tablespoons vanilla');
+      });
+      it('to fractional cup', () => {
+        expect(scale(ingredient, 4)).toEqual('1/4 cup vanilla');
+      });
+      it('to fractional cup', () => {
+        expect(scale(ingredient, 8)).toEqual('1/2 cup vanilla');
+      });
+      it('to fractional cup', () => {
+        expect(scale(ingredient, 15)).toEqual('15/16 cup vanilla');
+      });
+      it('to 2fractional cup', () => {
+        expect(scale(ingredient, 17)).toEqual('1 1/16 cups vanilla');
+      });
+    });
+  });
+
+  describe('no units', () => {
+    it('singular', () => {
+      const ingredient = '1 onion';
+
+      expect(scale(ingredient, 3)).toEqual('3 onions');
+    });
+    it('plural', () => {
+      const ingredient = '2 carrots';
+
+      expect(scale(ingredient, 3)).toEqual('6 carrots');
+    });
+  });
+
+  describe('abbreviations', () => {
+    it('ounces', () => {
+      expect(scale('1 oz', 2)).toEqual('2 oz');
+    });
+
+    it('pounds', () => {
+      expect(scale('1 lb', 2)).toEqual('2 lb');
+    });
+
+    it('milligrams', () => {
+      expect(scale('1 mg', 2)).toEqual('2 mg');
+    });
+
+    it('grams', () => {
+      expect(scale('1 g', 2)).toEqual('2 g');
+    });
+
+    it('kilograms', () => {
+      expect(scale('1 kg', 2)).toEqual('2 kg');
+    });
+
+    it('teaspoons', () => {
+      expect(scale('1 tsp', 2)).toEqual('2 tsp');
+    });
+
+    it('tablespoons', () => {
+      expect(scale('1 tbs', 2)).toEqual('2 tbs');
+    });
+
+    it('cups', () => {
+      expect(scale('1 cup', 2)).toEqual('2 cups');
+    });
+
+    it('pints', () => {
+      expect(scale('1 pnt', 2)).toEqual('2 pnt');
+    });
+
+    it('quarts', () => {
+      expect(scale('1 qt', 2)).toEqual('2 qt');
+    });
+
+    it('gallons', () => {
+      expect(scale('1 gal', 2)).toEqual('2 gal');
+    });
+
+    it('milliliters', () => {
+      expect(scale('1 ml', 2)).toEqual('2 ml');
+    });
+
+    it('liters', () => {
+      expect(scale('1 l', 2)).toEqual('2 l');
+    });
+
+    it('kiloliters', () => {
+      expect(scale('1 kl', 2)).toEqual('2 kl');
     });
   });
 
@@ -156,9 +265,29 @@ describe('scale', () => {
     expect(scale(ingredient, 3)).toEqual('3-6 bunches of flax');
   });
 
+  it('supports "dashes"', () => {
+    const ingredient = '1-2 dashes of salt';
+
+    expect(scale(ingredient, 3)).toEqual('3-6 dashes of salt');
+  });
+
+  it('supports "optional"', () => {
+    const ingredient = 'optional salt';
+
+    expect(scale(ingredient, 3)).toEqual('optional salt');
+  });
+
   it('supports sixteenths', () => {
     const ingredient = '1 tablespoon cream';
 
     expect(scale(ingredient, 100)).toEqual('1 9/16 quarts cream');
+  });
+
+  it('supports links in description', () => {
+    const ingredient = '1 tablespoon <a href="/foo/bar">cream</a>';
+
+    expect(scale(ingredient, 100)).toEqual(
+      '1 9/16 quarts <a href="/foo/bar">cream</a>',
+    );
   });
 });

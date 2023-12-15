@@ -6,6 +6,30 @@ import { Decimal } from 'decimal.js';
 import { parseIngredient, Ingredient } from 'parse-ingredient';
 import { formatQuantity } from 'format-quantity-with-sixteenths';
 
+const PLURAL_ABBREVIATIONS = [
+  // Mass | imperial
+'ozs',
+'lbs',
+
+  // Mass | metric
+'mgs',
+'gs',
+'kgs',
+
+  // Volume | imperial
+'tsps',
+'Tbs',
+// 'cups',
+'pnts',
+'qts',
+'gals',
+
+  // Volume | metric
+'mls',
+'ls',
+'kls',
+];
+
 const UNIT_OF_MEASURE_CONVERSION = {
   // Mass | imperial
   ounce: 'oz',
@@ -43,6 +67,7 @@ const EXCLUDE_UNITS = [
   'in3',
   'ft3',
   'yd3',
+  'pnt',
 
   // Volume | metric
   'mm3',
@@ -68,25 +93,37 @@ const IMPERIAL_UNITS = [
   'tsp',
   'Tbs',
   'cup',
-  'pnt',
+  //'pnt',
   'qt',
   'gal',
 ];
 
-function getUnitsToExclude(quantity: number, unitOfMeasure: string): string[] {
-  const unitsToExclude = EXCLUDE_UNITS;
+const TEASPOONS_IN_CUP = 48;
+const TABLESPOONS_IN_CUP = 16;
 
-  if (unitOfMeasure === 'cup' && quantity > 1 / 8) {
-    unitsToExclude.push('Tbs');
-    unitsToExclude.push('tsp');
+function getCutoffNumber(quantity: number, unitOfMeasure: string): number {
+  if (
+    unitOfMeasure === 'teaspoon' &&
+    quantity >= 5 &&
+    quantity < TEASPOONS_IN_CUP
+  ) {
+    return 0.25;
   }
 
-  return unitsToExclude;
+  if (
+    unitOfMeasure === 'tablespoon' &&
+    quantity >= 3 &&
+    quantity < TABLESPOONS_IN_CUP
+  ) {
+    return 0.25;
+  }
+
+  return 1;
 }
 
 function getHumanUnit(singular: string, plural: string, value: number): string {
   const pluralizedUnitOfMeasure = (value > 1 ? plural : singular).toLowerCase();
-  const unitedStatesSpelling = spelling.toUS(
+  let unitedStatesSpelling = spelling.toUS(
     pluralizedUnitOfMeasure.toLowerCase(),
   );
 
@@ -108,7 +145,10 @@ function getBestUnitOfMeasure(
   try {
     bestUnitOfMeasure = convert(quantity)
       .from(relevantUnitOfMeasure)
-      .toBest({ exclude: getUnitsToExclude(quantity, currentUnitOfMeasure) });
+      .toBest({
+        exclude: EXCLUDE_UNITS,
+        cutOffNumber: getCutoffNumber(quantity, currentUnitOfMeasure),
+      });
   } catch (e) {
     bestUnitOfMeasure = {
       singular: currentUnitOfMeasure,
@@ -123,9 +163,24 @@ function getBestUnitOfMeasure(
   };
 }
 
+/**
+ * e.g. "1 onion", "3 carrots"
+ */
+function isNoUnitIngredient(ingredient: Ingredient): boolean {
+  const { quantity, quantity2, unitOfMeasure, unitOfMeasureID } = ingredient;
+  return quantity && !quantity2 && !unitOfMeasure && !unitOfMeasureID;
+}
+
 function ingredientToString(ingredient: Ingredient): string {
-  const { quantity, quantity2, unitOfMeasureID } = ingredient;
+  const { quantity, quantity2, unitOfMeasureID, description } = ingredient;
   const components = [];
+
+  if (isNoUnitIngredient(ingredient)) {
+    let pluralizedDescription =
+      quantity > 1 ? pluralize(description) : description;
+  pluralizedDescription = PLURAL_ABBREVIATIONS.includes(pluralizedDescription) ? pluralizedDescription.substring(0, pluralizedDescription.length - 1) : pluralizedDescription;
+    return `${quantity} ${pluralizedDescription}`;
+  }
 
   if (unitOfMeasureID) {
     const formatQuantityOptions = {
@@ -193,15 +248,20 @@ function ingredientToString(ingredient: Ingredient): string {
   return components.join(' ');
 }
 
-const QUANTITY_NUMBERS = /([0-9 .\/]+)/g
-const IMPROPER_FRACTION = /^([0-9]+) ([0-9]+)\/([0-9]+)/
-const FRACTION = /^([0-9]+)\/([0-9]+)/
+const QUANTITY_NUMBERS =
+  /(?:([0-9]+ [0-9+]\/[0-9]+)|([0-9+]\/[0-9]+)|([0-9]+\.[0-9]+)|(\.[0-9]+)|([0-9]+))/g;
+const IMPROPER_FRACTION = /^([0-9]+) ([0-9]+)\/([0-9]+)/;
+const FRACTION = /^([0-9]+)\/([0-9]+)/;
 
 function decimalify(quantity: string): Decimal {
   if (IMPROPER_FRACTION.test(quantity)) {
-    const [_, whole, numerator, denominator] = quantity.match(IMPROPER_FRACTION);
+    const [_, whole, numerator, denominator] =
+      quantity.match(IMPROPER_FRACTION);
 
-    return new Decimal(whole).times(denominator).plus(numerator).dividedBy(denominator);
+    return new Decimal(whole)
+      .times(denominator)
+      .plus(numerator)
+      .dividedBy(denominator);
   }
 
   if (FRACTION.test(quantity)) {
@@ -213,32 +273,39 @@ function decimalify(quantity: string): Decimal {
   return new Decimal(quantity);
 }
 
+function parseQuantities(ingredient: string): {
+  quantity: Decimal | null;
+  quantity2: Decimal | null;
+} {
+  if (QUANTITY_NUMBERS.test(ingredient)) {
+    const quantityNumbers = ingredient
+      .match(QUANTITY_NUMBERS)
+      .filter((match) => match !== ' ')
+      .map((match) => match.trim());
 
-function parseQuantities(ingredient:string, parsedIngredient: {quantity: number|null, quantity2: number|null}): {quantity: Decimal|null, quantity2: Decimal|null} {
-  let quantity =
-    parsedIngredient.quantity === null
-      ? null
-      : new Decimal(parsedIngredient.quantity);
-  let quantity2 =
-    parsedIngredient.quantity2 === null
-      ? null
-      : new Decimal(parsedIngredient.quantity2);
+    if (quantityNumbers.length === 0) {
+      return {
+        quantity: null,
+        quantity2: null,
+      };
+    }
 
-  const quantityNumbers = ingredient.match(QUANTITY_NUMBERS).filter((match) => match !== ' '
-  ).map((match) => match.trim());
-  if (quantityNumbers.length == 1) {
-    //console.log(quantityNumbers)
-    quantity = decimalify(quantityNumbers[0]);
-  } else {
-    //console.log(quantityNumbers[0])
-    //console.log(quantityNumbers[1])
-    quantity = decimalify(quantityNumbers[0]);
-    quantity2 = decimalify(quantityNumbers[1]);
+    if (quantityNumbers.length === 1) {
+      return {
+        quantity: decimalify(quantityNumbers[0]),
+        quantity2: null,
+      };
+    }
+
+    return {
+      quantity: decimalify(quantityNumbers[0]),
+      quantity2: decimalify(quantityNumbers[1]),
+    };
   }
 
   return {
-    quantity,
-    quantity2,
+    quantity: null,
+    quantity2: null,
   };
 }
 
@@ -248,10 +315,11 @@ export function scale(ingredient: string, factor: number): string {
     allowLeadingOf: true,
   })[0];
 
-  const {quantity, quantity2} = parseQuantities(ingredient, parsedIngredient);
-
-  const scaledQuantity = quantity ? quantity.times(factor).toNumber() : null;
-  const scaledQuantity2 = quantity2 ? quantity2.times(factor).toNumber() : null;
+  const { quantity, quantity2 } = parseQuantities(ingredient);
+  const scaledQuantity = !quantity ? null : quantity.times(factor).toNumber();
+  const scaledQuantity2 = !quantity2
+    ? null
+    : quantity2.times(factor).toNumber();
 
   return ingredientToString({
     ...parsedIngredient,
