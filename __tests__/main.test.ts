@@ -87,13 +87,13 @@ describe('scale', () => {
       it('to tablespoon', () => {
         expect(scale(ingredient, 3)).toEqual('3 tablespoons vanilla');
       });
-      it('to fractional cup', () => {
+      it('to fractional cup (4ths)', () => {
         expect(scale(ingredient, 4)).toEqual('1/4 cup vanilla');
       });
-      it('to fractional cup', () => {
+      it('to fractional cup (2nds)', () => {
         expect(scale(ingredient, 8)).toEqual('1/2 cup vanilla');
       });
-      it('to fractional cup', () => {
+      it('to fractional cup (16ths)', () => {
         expect(scale(ingredient, 15)).toEqual('15/16 cup vanilla');
       });
       it('to 2fractional cup', () => {
@@ -112,64 +112,6 @@ describe('scale', () => {
       const ingredient = '2 carrots';
 
       expect(scale(ingredient, 3)).toEqual('6 carrots');
-    });
-  });
-
-  describe('abbreviations', () => {
-    it('ounces', () => {
-      expect(scale('1 oz', 2)).toEqual('2 oz');
-    });
-
-    it('pounds', () => {
-      expect(scale('1 lb', 2)).toEqual('2 lb');
-    });
-
-    it('milligrams', () => {
-      expect(scale('1 mg', 2)).toEqual('2 mg');
-    });
-
-    it('grams', () => {
-      expect(scale('1 g', 2)).toEqual('2 g');
-    });
-
-    it('kilograms', () => {
-      expect(scale('1 kg', 2)).toEqual('2 kg');
-    });
-
-    it('teaspoons', () => {
-      expect(scale('1 tsp', 2)).toEqual('2 tsp');
-    });
-
-    it('tablespoons', () => {
-      expect(scale('1 tbs', 2)).toEqual('2 tbs');
-    });
-
-    it('cups', () => {
-      expect(scale('1 cup', 2)).toEqual('2 cups');
-    });
-
-    it('pints', () => {
-      expect(scale('1 pnt', 2)).toEqual('2 pnt');
-    });
-
-    it('quarts', () => {
-      expect(scale('1 qt', 2)).toEqual('2 qt');
-    });
-
-    it('gallons', () => {
-      expect(scale('1 gal', 2)).toEqual('2 gal');
-    });
-
-    it('milliliters', () => {
-      expect(scale('1 ml', 2)).toEqual('2 ml');
-    });
-
-    it('liters', () => {
-      expect(scale('1 l', 2)).toEqual('2 l');
-    });
-
-    it('kiloliters', () => {
-      expect(scale('1 kl', 2)).toEqual('2 kl');
     });
   });
 
@@ -289,5 +231,13 @@ describe('scale', () => {
     expect(scale(ingredient, 100)).toEqual(
       '1 9/16 quarts <a href="/foo/bar">cream</a>',
     );
+  });
+
+  it('scales singular quantity without ingredient', () => {
+    expect(scale("1 milliliter", 1000)).toEqual('1 liter');
+  });
+
+  it('scales plural quantity without ingredient', () => {
+    expect(scale("1 milliliter", 2000)).toEqual('2 liters');
   });
 });

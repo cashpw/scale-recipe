@@ -6,30 +6,6 @@ import { Decimal } from 'decimal.js';
 import { parseIngredient, Ingredient } from 'parse-ingredient';
 import { formatQuantity } from 'format-quantity-with-sixteenths';
 
-const PLURAL_ABBREVIATIONS = [
-  // Mass | imperial
-'ozs',
-'lbs',
-
-  // Mass | metric
-'mgs',
-'gs',
-'kgs',
-
-  // Volume | imperial
-'tsps',
-'Tbs',
-// 'cups',
-'pnts',
-'qts',
-'gals',
-
-  // Volume | metric
-'mls',
-'ls',
-'kls',
-];
-
 const UNIT_OF_MEASURE_CONVERSION = {
   // Mass | imperial
   ounce: 'oz',
@@ -123,7 +99,7 @@ function getCutoffNumber(quantity: number, unitOfMeasure: string): number {
 
 function getHumanUnit(singular: string, plural: string, value: number): string {
   const pluralizedUnitOfMeasure = (value > 1 ? plural : singular).toLowerCase();
-  let unitedStatesSpelling = spelling.toUS(
+  const unitedStatesSpelling = spelling.toUS(
     pluralizedUnitOfMeasure.toLowerCase(),
   );
 
@@ -171,15 +147,24 @@ function isNoUnitIngredient(ingredient: Ingredient): boolean {
   return quantity && !quantity2 && !unitOfMeasure && !unitOfMeasureID;
 }
 
+function isBareQuantity(ingredient: Ingredient): boolean {
+  const { quantity, quantity2, unitOfMeasure, unitOfMeasureID, description } = ingredient;
+  return quantity && description && !quantity2 && !unitOfMeasure && !unitOfMeasureID;
+}
+
 function ingredientToString(ingredient: Ingredient): string {
-  const { quantity, quantity2, unitOfMeasureID, description } = ingredient;
+  const { quantity, quantity2, description } = ingredient;
+  let { unitOfMeasureID } = ingredient;
   const components = [];
 
-  if (isNoUnitIngredient(ingredient)) {
-    let pluralizedDescription =
+  if (isNoUnitIngredient(ingredient) && !isBareQuantity(ingredient)) {
+    const pluralizedDescription =
       quantity > 1 ? pluralize(description) : description;
-  pluralizedDescription = PLURAL_ABBREVIATIONS.includes(pluralizedDescription) ? pluralizedDescription.substring(0, pluralizedDescription.length - 1) : pluralizedDescription;
     return `${quantity} ${pluralizedDescription}`;
+  }
+
+  if (isBareQuantity(ingredient)) {
+    unitOfMeasureID = description;
   }
 
   if (unitOfMeasureID) {
@@ -241,7 +226,7 @@ function ingredientToString(ingredient: Ingredient): string {
     }
   }
 
-  if (ingredient.description) {
+  if (ingredient.description && !isBareQuantity(ingredient)) {
     components.push(ingredient.description);
   }
 
